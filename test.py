@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.CRITICAL)
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-ckpt_path = r"checkPoints/daf_net.pth"
+ckpt_path = os.path.join("checkPoints","daf_net.pth")
 print(f"{ckpt_path}\n")
 for dataset_name in ["TNO", "RoadScene", "MSRS_test"]:  #
     print(f"The test result of {dataset_name}:")

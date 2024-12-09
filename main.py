@@ -12,19 +12,25 @@ import torch.nn as nn
 from utils.imageUtils import img_save, image_read_cv2
 import warnings
 import logging
-
+import matplotlib.pyplot as plt 
+from PIL import Image 
+#忽略所有警告信息，确保程序的输出干净。
 warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.CRITICAL)
-
+def normalize_image(image):
+    image = (image - np.min(image)) / (np.max(image) - np.min(image)) * 255.0
+    return image.astype(np.uint8)
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-#读取数据集
+#读取深度学习模型
 ckpt_path = os.path.join("checkPoints","daf_net.pth")
 print(f"{ckpt_path}\n")
-print(f"The test result of {"input"}:")
+#初始化输入输出
+print(f"The test result of input:")
 test_folder = os.path.join("input")
 test_out_folder = os.path.join("output")
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+#加载模型权重
 Encoder = nn.DataParallel(Restormer_Encoder()).to(device)
 Decoder = nn.DataParallel(Restormer_Decoder()).to(device)
 BaseFuseLayer = nn.DataParallel(BaseFeatureExtractor(dim=64, num_heads=8)).to(
@@ -35,6 +41,7 @@ Encoder.load_state_dict(torch.load(ckpt_path)["DIDF_Encoder"])
 Decoder.load_state_dict(torch.load(ckpt_path)["DIDF_Decoder"])
 BaseFuseLayer.load_state_dict(torch.load(ckpt_path)["BaseFuseLayer"])
 DetailFuseLayer.load_state_dict(torch.load(ckpt_path)["DetailFuseLayer"])
+#eval评估模式
 Encoder.eval()
 Decoder.eval()
 BaseFuseLayer.eval()
@@ -49,6 +56,7 @@ with torch.no_grad():
             ]
             / 255.0
             )
+        data_VIS_color = Image.open(os.path.join(test_folder, "vi", img_name)).convert("RGB")
         data_VIS = (
                 image_read_cv2(os.path.join(test_folder, "vi", img_name), mode="GRAY")[
                     np.newaxis, np.newaxis, ...
@@ -57,6 +65,7 @@ with torch.no_grad():
             )
 
         data_IR, data_VIS = torch.FloatTensor(data_IR), torch.FloatTensor(data_VIS)
+
         data_VIS, data_IR = data_VIS.cuda(), data_IR.cuda()
 
         feature_V_B, feature_V_D, feature_V = Encoder(data_VIS)
@@ -68,7 +77,36 @@ with torch.no_grad():
                 torch.max(data_Fuse) - torch.min(data_Fuse)
             )
         fi = np.squeeze((data_Fuse * 255).cpu().numpy())
+        fi = normalize_image(fi)  
         img_save(fi, img_name.split(sep=".")[0], test_out_folder)
+
+
+        if np.max(fi) == 0:
+            print(f"Warning: Fused image {img_name} is completely black!")
+            continue
+        
+        data_VIS_color_np = np.array(data_VIS_color)  
+        fi_img_color = (fi[:, :, np.newaxis] / 255.0 * data_VIS_color_np).astype(np.uint8)
+
+
+        
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+        
+        axes[0].imshow(np.squeeze(data_IR.cpu().numpy()), cmap='gray')
+        axes[0].set_title("Infrared (IR)")
+        axes[0].axis('off')
+
+        
+        axes[1].imshow(data_VIS_color)
+        axes[1].set_title("Visible (VI)")
+        axes[1].axis('off')
+
+        
+        axes[2].imshow(fi_img_color)
+        axes[2].set_title("Fused Image (Color)")
+        axes[2].axis('off')
+        plt.show()
 
     eval_folder = test_out_folder
     ori_img_folder = test_folder
