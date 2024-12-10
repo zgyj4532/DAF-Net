@@ -9,87 +9,12 @@ import numpy as np
 from utils.evaluator import Evaluator
 import torch
 import torch.nn as nn
-from utils.imageUtils import img_save, image_read_cv2
+from utils.imageUtils import img_save, image_read_cv2,normalize_image,display_images,display_fused_image
 import warnings
 import logging
 import matplotlib.pyplot as plt 
 from PIL import Image 
-def normalize_image(image):
-    image = (image - np.min(image)) / (np.max(image) - np.min(image)) * 255.0
-    return image.astype(np.uint8)
-def display_images(data_IR, data_VIS, fi, title_IR="Infrared (IR)", title_VIS="Visible (VI)", title_Fuse="Fused Image"):
-    """
-    显示红外图像、可见光图像和融合图像。
-    
-    参数:
-    data_IR (Tensor): 红外图像数据
-    data_VIS (Tensor): 可见光图像数据
-    fi (ndarray): 融合图像
-    title_IR (str): 红外图像标题
-    title_VIS (str): 可见光图像标题
-    title_Fuse (str): 融合图像标题
-    """
-    # 创建图形和子图
-    plt.figure(figsize=(15, 5))
 
-    # 显示红外图像
-    plt.subplot(1, 3, 1)
-    plt.title(title_IR)
-    plt.imshow(data_IR.cpu().numpy().squeeze(), cmap="gray")
-    plt.axis("off")
-
-    # 显示可见光图像
-    plt.subplot(1, 3, 2)
-    plt.title(title_VIS)
-    plt.imshow(data_VIS.cpu().numpy().squeeze(), cmap="gray")
-    plt.axis("off")
-
-    # 显示融合图像
-    plt.subplot(1, 3, 3)
-    plt.title(title_Fuse)
-    plt.imshow(fi, cmap="gray")
-    plt.axis("off")
-
-    # 调整布局并显示图像
-    plt.tight_layout()
-    plt.show()
-def display_fused_image(img_name, data_IR, data_VIS_color, data_VIS, fi, fi_img_color):
-    """
-    显示红外图像、可见光图像和彩色融合图像。
-    
-    参数:
-    img_name (str): 图像文件名
-    data_IR (Tensor): 红外图像数据
-    data_VIS_color (PIL Image): 可见光彩色图像
-    data_VIS (Tensor): 可见光灰度图像数据
-    fi (ndarray): 灰度融合图像
-    fi_img_color (ndarray): 彩色融合图像
-    """
-    
-    # 检查融合图像是否正常
-    if np.max(fi) == 0:
-        print(f"Warning: Fused image {img_name} is completely black!")
-        return
-
-    # 显示图像
-    _, axes = plt.subplots(1, 3, figsize=(15, 5))
-
-    # 显示红外图像
-    axes[0].imshow(np.squeeze(data_IR.cpu().numpy()), cmap='gray')
-    axes[0].set_title("Infrared (IR)")
-    axes[0].axis('off')
-
-    # 显示可见光图像
-    axes[1].imshow(data_VIS_color)
-    axes[1].set_title("Visible (VI)")
-    axes[1].axis('off')
-
-    # 显示彩色融合图像
-    axes[2].imshow(fi_img_color)
-    axes[2].set_title("Fused Image (Color)")
-    axes[2].axis('off')
-
-    plt.show()
 
 #忽略所有警告信息，确保程序的输出干净。
 warnings.filterwarnings("ignore")
